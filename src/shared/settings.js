@@ -7,7 +7,7 @@ export const DEFAULT_SETTINGS = {
   // Skip posts with images, video or link cards: the model only sees text. Skipped posts can still be rated on click.
   skipMedia: true,
   // Which axes to rate posts on; each enabled one gets its own badge.
-  categories: { bait: false, troll: false, dumb: true },
+  categories: { bait: false, troll: false, dumb: true, slop: false },
 };
 
 export async function getSettings() {

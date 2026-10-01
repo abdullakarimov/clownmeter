@@ -2,7 +2,7 @@
   "name": "clownmeter",
   "version": "0.1.0",
   "private": true,
-  "description": "Chrome extension that rates X and Threads posts for bait, trolling and plain dumbness using an LLM.",
+  "description": "Chrome extension that rates X and Threads posts for bait, trolling, plain dumbness and AI slop using an LLM.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",

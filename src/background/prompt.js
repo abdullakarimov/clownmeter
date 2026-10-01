@@ -2,6 +2,7 @@ const DEFINITIONS = {
   bait: "engineered to farm engagement rather than to inform or express something sincerely. Rage bait, outrage farming, deliberately inflammatory hot takes, \"unpopular opinion\" / \"only real ones will understand\" engagement hooks, misleading or clickbait framing, culture-war flamebait.",
   troll: "bad faith aimed at upsetting, derailing or mocking people. Insincere provocation, dunking, sealioning, deliberate misrepresentation of others, punching down for laughs.",
   dumb: "plainly wrong or incoherent thinking. Factual blunders, obvious logical fallacies, confident misunderstanding, conspiracy reasoning, self-owns. This is not about spelling, slang, casual tone, or opinions you happen to disagree with.",
+  slop: "reads like low-effort AI-generated filler. Generic, padded text with little actual information; stock LLM phrasing (\"in today's fast-paced world\", \"let's dive in\", \"it's not just X, it's Y\", \"game-changer\", \"here's the thing\"); formulaic hook → emoji-bulleted list → \"What do you think? 👇\" structure; hollow motivational or thought-leader platitudes; hashtag stuffing. You can't know who or what wrote the post: score how strongly the text shows these signs, not a guess at authorship. Clear, specific, well-written posts are not slop, and neither are short casual posts or non-native English.",
 };
 
 export function buildSystemPrompt(categories) {

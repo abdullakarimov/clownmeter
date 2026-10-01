@@ -3,6 +3,7 @@ export const CATEGORIES = [
   { id: "bait", label: "Bait", emoji: "🎣" },
   { id: "troll", label: "Troll", emoji: "🧌" },
   { id: "dumb", label: "Dumb", emoji: "🤡" },
+  { id: "slop", label: "AI slop", emoji: "🤖" },
 ];
 
 export const CATEGORY_IDS = CATEGORIES.map((c) => c.id);

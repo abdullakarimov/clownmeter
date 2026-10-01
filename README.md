@@ -1,12 +1,13 @@
 # 🤡 Clownmeter
 
-A Chrome extension that reads posts on **X** and **Threads**, sends them to an LLM, and adds 0–100 score badges next to each post's timestamp. It can rate three categories; choose which ones in the popup:
+A Chrome extension that reads posts on **X** and **Threads**, sends them to an LLM, and adds 0–100 score badges next to each post's timestamp. It can rate four categories; choose which ones in the popup:
 
 | Badge | Category | Default |
 |---|---|---|
 | 🎣 | **Bait**: engagement or rage farming, clickbait hooks, flamebait | off |
 | 🧌 | **Troll**: bad-faith provocation, dunking, deliberate misrepresentation | off |
 | 🤡 | **Dumb**: plainly wrong or incoherent reasoning. Bad spelling and opinions you disagree with don't count | **on** |
+| 🤖 | **AI slop**: reads like low-effort AI-generated filler: generic padding, stock LLM phrasing, the hook → emoji list → "Thoughts? 👇" formula. Scores how strongly the text shows these signs; it can't prove who or what wrote it | off |
 
 Each enabled category gets its own badge. Click a badge for the reason behind its score and which model rated it.
 
