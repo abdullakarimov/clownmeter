@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="size" content="1400x560" />
+    <link rel="stylesheet" href="../../src/content/content.css" />
+    <link rel="stylesheet" href="store.css" />
+    <style>
+      body { width: 1400px; height: 560px; }
+      .marquee {
+        display: grid;
+        grid-template-columns: 1fr 560px;
+        align-items: center;
+        gap: 40px;
+        width: 1400px;
+        height: 560px;
+        padding: 0 100px;
+        color: #fff;
+        background: radial-gradient(circle at 20% 20%, #ef4b3d 0%, #c4271c 50%, #8f1a12 100%);
+      }
+      .logo { display: flex; align-items: center; gap: 20px; margin-bottom: 18px; }
+      .logo .nose { width: 112px; height: 112px; border-radius: 50%; background: #fff; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
+      .logo .nose img { display: block; width: 112px; height: 112px; }
+      .logo h1 { margin: 0; font-size: 72px; letter-spacing: -0.03em; }
+      .tagline { margin: 0; font-size: 30px; font-weight: 500; line-height: 1.35; opacity: 0.95; }
+      .card { border-radius: 18px; overflow: hidden; background: #101010; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35); }
+      .card .feed { zoom: 1.45; }
+      .card .post { border-bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <div class="marquee">
+      <div>
+        <div class="logo">
+          <div class="nose"><img src="../../icons/128.png" alt="" /></div>
+          <h1>Clownmeter</h1>
+        </div>
+        <p class="tagline">Rates X and Threads posts for bait, trolling,<br />plain dumbness and AI slop.</p>
+      </div>
+      <div class="card">
+        <div class="feed">
+          <div class="post">
+            <div class="avatar" style="background: #c43b3b">HT</div>
+            <div>
+              <div class="meta"><b>hot.takes.daily</b><span>2h</span></div>
+              <div class="text">Unpopular opinion: if you still use a paper notebook in 2026 you're just not serious about your career. Repost if you agree 💯</div>
+              <div class="meta" style="margin-top: 8px"><span class="cm-badges" style="margin: 0"><button class="cm-badge" data-level="max">🎣 91</button><button class="cm-badge" data-level="mid">🧌 38</button><button class="cm-badge" data-level="mid">🤡 47</button><button class="cm-badge" data-level="low">🤖 22</button></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -18,6 +18,9 @@
       main { max-width: 600px; margin: 0 auto; }
       h1 { margin: 0 0 4px; font-size: 22px; }
       .intro { margin: 0 0 24px; color: var(--muted); }
+      .welcome { margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--accent); border-radius: 12px; background: var(--card); }
+      .welcome strong { display: block; margin-bottom: 4px; }
+      .welcome a { color: inherit; }
       .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
       .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
       h2 { margin: 0; font-size: 16px; }
@@ -49,6 +52,13 @@
     <main>
       <h1>🤡 Clownmeter</h1>
       <p class="intro">API keys, models and rate limits. Leave a field empty to use the built-in default.</p>
+      <div class="welcome" id="welcome" hidden>
+        <strong>Welcome! Add an API key to get started.</strong>
+        Clownmeter sends post text to an AI model using your own API key. A free
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini key</a> is enough to begin; a
+        <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq key</a> adds a fallback when Gemini's free limits run out.
+        Paste a key below, press <b>Test</b>, then <b>Save</b>.
+      </div>
       <form id="form">
         <div id="providers"></div>
         <div class="actions">

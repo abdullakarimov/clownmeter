@@ -95,6 +95,7 @@ function readCard(card) {
 async function init() {
   const [info, saved] = await Promise.all([chrome.runtime.sendMessage({ type: "clownmeter:info" }), getProviderSettings()]);
   const container = document.getElementById("providers");
+  document.getElementById("welcome").hidden = info.providers.some((p) => p.usable);
   info.providers.forEach((provider, i) => container.append(renderCard(provider, i, info.providers.length, saved[provider.id] ?? {})));
 
   const savedNote = document.getElementById("saved");

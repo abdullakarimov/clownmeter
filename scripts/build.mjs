@@ -7,7 +7,9 @@ import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dist = path.join(root, "dist");
+// --out=<dir> builds somewhere other than dist/ (used by scripts/package.mjs).
+const outArg = process.argv.find((arg) => arg.startsWith("--out="));
+const dist = path.resolve(root, outArg ? outArg.slice("--out=".length) : "dist");
 const watch = process.argv.includes("--watch");
 // --no-keys leaves API keys out of the bundle, for a build you can share; users add keys in the options page.
 const noKeys = process.argv.includes("--no-keys");
@@ -97,7 +99,8 @@ async function build() {
     console.log(`Watching JS sources. Providers: ${chain}\n(Re-run the build after editing .env, manifest, CSS or HTML.)`);
   } else {
     await Promise.all(builds.map((opts) => esbuild.build(opts)));
-    console.log(`Built dist/. Providers: ${chain}\nLoad it via chrome://extensions → Load unpacked.`);
+    console.log(`Built ${path.relative(root, dist)}/. Providers: ${chain}`);
+    if (!outArg) console.log("Load it via chrome://extensions → Load unpacked.");
   }
 }
 

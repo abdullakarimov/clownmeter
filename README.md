@@ -11,6 +11,8 @@ A Chrome extension that reads posts on **X** and **Threads**, sends them to an L
 
 Each enabled category gets its own badge. Click a badge for the reason behind its score and which model rated it.
 
+> **Status:** Threads support works. **X (Twitter) support needs fixing**: post detection and badge interaction on x.com haven't been verified yet. Chrome Web Store publishing is on hold until it's fixed.
+
 Supports **Google Gemini**, **Groq**, **Anthropic Claude** and any OpenAI-compatible endpoint (OpenAI, OpenRouter, Ollama, LM Studio, …). You can chain several providers: when one is rate-limited, failing or unreachable, the next one rates the post.
 
 ## Setup
@@ -63,7 +65,22 @@ Settings are stored in `chrome.storage.local`: on this device only, not synced. 
 npm run build:shareable
 ```
 
-This builds `dist/` **without** any API keys from `.env`, but keeps the provider order, models and limits as defaults. You can zip and share that folder; each person adds their own keys in the options page.
+This builds `dist/` **without** any API keys from `.env`, but keeps the provider order, models and limits as defaults. You can zip and share that folder; each person adds their own keys in the options page, which opens automatically on install when no key is set.
+
+### Publishing to the Chrome Web Store
+
+_On hold until X support is fixed. Everything below is ready for when it is._
+
+```bash
+npm run package        # → release/clownmeter-<version>.zip (no API keys; refuses to build if one leaks)
+npm run store-assets   # → store/*.png screenshots and promo tiles (needs Google Chrome installed)
+npm run icons          # regenerates icons/ (128px icon has the store's 16px padding)
+```
+
+- `npm run package` builds into `release/build/`, so your personal `dist/` stays as it is.
+- [`store/listing.md`](store/listing.md) has every dashboard field ready to paste: description, permission justifications, data-usage answers and reviewer test instructions.
+- [`PRIVACY.md`](PRIVACY.md) is the privacy policy. Its GitHub URL goes in the listing.
+- For each update, raise `version` in `src/manifest.json`, run `npm run package` and upload the new zip.
 
 ### Rate limits and fallback
 
@@ -114,6 +131,8 @@ background service worker
 | `src/background/providers.js` | Gemini, OpenAI-compatible (Groq, …) and Claude (official `@anthropic-ai/sdk`) API calls |
 | `src/background/ratelimit.js` | Per-provider minute/day budgets and cooldowns |
 | `scripts/build.mjs` | Reads `.env`, bundles with esbuild into `dist/` |
+| `scripts/package.mjs` | Key-free Chrome Web Store zip |
+| `store/` | Store listing text, image sources (`store/src/`) and rendered images |
 
 Only the text is judged. Images and video aren't sent. Posts with media are skipped by default, and when one is rated anyway, the model is told it has media it can't see.
 

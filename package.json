@@ -7,6 +7,9 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:shareable": "node scripts/build.mjs --no-keys",
+    "package": "node scripts/package.mjs",
+    "icons": "node scripts/icons.mjs",
+    "store-assets": "node scripts/store-assets.mjs",
     "watch": "node scripts/build.mjs --watch"
   },
   "dependencies": {

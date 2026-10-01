@@ -121,6 +121,14 @@ async function analyze(post, categories) {
   return inFlight.get(flightKey);
 }
 
+// ---- First run ----
+
+// Without a key nothing can be rated, so send new users straight to the options page.
+chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+  if (reason !== "install") return;
+  if (!(await currentProviders()).some(isUsable)) chrome.runtime.openOptionsPage();
+});
+
 // ---- Provider test (options page) ----
 
 const TEST_POST = {

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="size" content="440x280" />
+    <link rel="stylesheet" href="../../src/content/content.css" />
+    <link rel="stylesheet" href="store.css" />
+    <style>
+      body { width: 440px; height: 280px; }
+      .tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 440px;
+        height: 280px;
+        color: #fff;
+        background: radial-gradient(circle at 30% 20%, #ef4b3d 0%, #c4271c 55%, #8f1a12 100%);
+      }
+      .logo { display: flex; align-items: center; gap: 12px; }
+      .logo .nose { width: 68px; height: 68px; border-radius: 50%; background: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+      .logo .nose img { display: block; width: 68px; height: 68px; }
+      .tile .cm-badge { border: 1.5px solid rgba(255, 255, 255, 0.9); }
+      .logo h1 { margin: 0; font-size: 40px; letter-spacing: -0.02em; }
+      .tagline { margin: 0; font-size: 18px; font-weight: 500; opacity: 0.95; }
+      .cm-badges { margin-top: 8px; zoom: 1.35; }
+    </style>
+  </head>
+  <body>
+    <div class="tile">
+      <div class="logo">
+        <div class="nose"><img src="../../icons/128.png" alt="" /></div>
+        <h1>Clownmeter</h1>
+      </div>
+      <p class="tagline">Spot bait, trolls &amp; AI slop</p>
+      <span class="cm-badges"><button class="cm-badge" data-level="max">🎣 91</button><button class="cm-badge" data-level="high">🧌 64</button><button class="cm-badge" data-level="mid">🤡 47</button><button class="cm-badge" data-level="low">🤖 3</button></span>
+    </div>
+  </body>
+</html>
