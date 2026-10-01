@@ -1,0 +1,53 @@
+.cm-badge {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font: 600 12px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  color: #3b3f45;
+  background: #e8eaed;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: filter 0.15s;
+}
+.cm-badge:hover { filter: brightness(0.95); }
+.cm-badge:focus-visible { outline: 2px solid #1d9bf0; outline-offset: 1px; }
+.cm-badge[data-state="loading"] { opacity: 0.7; cursor: progress; }
+.cm-badge[data-state="error"] { color: #8a1c1c; background: #fde2e2; }
+.cm-badge[data-level="low"] { color: #0f5132; background: #d1f2df; }
+.cm-badge[data-level="mid"] { color: #6b4e00; background: #fff0b8; }
+.cm-badge[data-level="high"] { color: #7a3300; background: #ffd8b5; }
+.cm-badge[data-level="max"] { color: #fff; background: #d92d20; }
+
+.cm-popover {
+  position: fixed;
+  z-index: 2147483647;
+  width: 280px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #16181c;
+  color: #e7e9ea;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.cm-pop-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.cm-pop-score { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cm-pop-verdict { font-weight: 600; }
+.cm-pop-row { display: grid; grid-template-columns: 42px 1fr 28px; align-items: center; gap: 8px; margin: 4px 0; }
+.cm-pop-label { color: #9aa0a6; }
+.cm-pop-num { text-align: right; font-variant-numeric: tabular-nums; }
+.cm-pop-bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.cm-pop-fill { height: 100%; border-radius: 3px; }
+.cm-pop-fill[data-level="low"] { background: #3ccf7a; }
+.cm-pop-fill[data-level="mid"] { background: #f5c518; }
+.cm-pop-fill[data-level="high"] { background: #ff8a3d; }
+.cm-pop-fill[data-level="max"] { background: #ff4d3d; }
+.cm-pop-why { margin: 10px 0 0; color: #c4c8cc; }

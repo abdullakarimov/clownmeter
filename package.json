@@ -1,0 +1,17 @@
+{
+  "name": "clownmeter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension that rates X and Threads posts for bait, trolling and plain dumbness using an LLM.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
