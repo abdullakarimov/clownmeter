@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:shareable": "node scripts/build.mjs --no-keys",
     "watch": "node scripts/build.mjs --watch"
   },
   "dependencies": {

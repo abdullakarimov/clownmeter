@@ -1,11 +1,14 @@
 # 🤡 Clownmeter
 
-A Chrome extension that reads posts on **X** and **Threads**, sends them to an LLM, and adds a badge next to each post's timestamp. The badge shows how much of a clown show the post is:
+A Chrome extension that reads posts on **X** and **Threads**, sends them to an LLM, and adds 0–100 score badges next to each post's timestamp. It can rate three categories; choose which ones in the popup:
 
-- **Bait**: engagement or rage farming, clickbait hooks, flamebait.
-- **Troll**: bad-faith provocation, dunking, deliberate misrepresentation.
-- **Dumb**: plainly wrong or incoherent reasoning. Bad spelling and opinions you disagree with don't count.
-- **🤡 score**: the overall 0–100 rating. Click the badge for the breakdown, a one-line verdict and the reasons.
+| Badge | Category | Default |
+|---|---|---|
+| 🎣 | **Bait**: engagement or rage farming, clickbait hooks, flamebait | off |
+| 🧌 | **Troll**: bad-faith provocation, dunking, deliberate misrepresentation | off |
+| 🤡 | **Dumb**: plainly wrong or incoherent reasoning. Bad spelling and opinions you disagree with don't count | **on** |
+
+Each enabled category gets its own badge. Click a badge for the reason behind its score and which model rated it.
 
 Supports **Google Gemini**, **Groq**, **Anthropic Claude** and any OpenAI-compatible endpoint (OpenAI, OpenRouter, Ollama, LM Studio, …). You can chain several providers: when one is rate-limited, failing or unreachable, the next one rates the post.
 
@@ -15,11 +18,13 @@ Requires Node 21.7+.
 
 ```bash
 npm install
-cp .env.example .env   # then fill in GEMINI_API_KEY / GROQ_API_KEY (or other providers)
+cp .env.example .env   # optional: built-in keys, models and limits
 npm run build
 ```
 
 Then open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and pick the `dist/` folder.
+
+API keys don't have to be in `.env`. They can also be set in the extension's **options page** (see below).
 
 After changing `.env`, run `npm run build` again and click the reload icon on the extension card. `npm run watch` rebuilds the JS on save.
 
@@ -39,18 +44,39 @@ The default setup in `.env.example` is Gemini (capped at 15/min and 500/day to m
 
 The build adds every provider's API origin to the manifest's `host_permissions` automatically.
 
+### Options page: your own keys and models
+
+Open it from the popup (**API keys & models…**) or by right-clicking the toolbar icon → **Options**. For each provider in the chain you can set:
+
+- an API key,
+- a model,
+- requests per minute and per day.
+
+Each provider also has a **Test** button, which sends a sample post using the values in the form, even before you save. Empty fields fall back to the built-in `.env` values. A provider with no key from either source is skipped.
+
+Settings are stored in `chrome.storage.local`: on this device only, not synced. Changing a provider's key or model resets its usage counters and any pause.
+
+### Sharing the extension
+
+```bash
+npm run build:shareable
+```
+
+This builds `dist/` **without** any API keys from `.env`, but keeps the provider order, models and limits as defaults. You can zip and share that folder; each person adds their own keys in the options page.
+
 ### Rate limits and fallback
 
 - Before each request, the extension checks the provider's `RPM`/`RPD` budget. When the budget is used up, it skips straight to the next provider.
 - On an HTTP 429 the provider is paused for the time the API asks for (Gemini's `retryDelay`, or `Retry-After`). If the 429 is a Gemini **per-day** quota error, it is paused until midnight Pacific.
 - 5xx errors, timeouts (30 s) and network errors pause the provider for 30 s. A rejected key or unknown model pauses it for 10 minutes.
-- If every provider is unavailable, badges show `🤡 ⏳`. Each one retries automatically once a slot frees up, but only if the post is still on screen; posts off screen are rated when you scroll back to them.
+- If every provider is unavailable, badges show `⏳`. Each one retries automatically once a slot frees up, but only if the post is still on screen; posts off screen are rated when you scroll back to them.
 - The popup shows each provider's usage for the day and the minute, and when a provider is paused.
 
 ## Using it
 
-- **Popup** (toolbar icon): turn the extension on or off and switch **Auto-rate visible posts**. With auto-rate off, posts show `🤡 ?` and are rated only when clicked.
-- Ratings are cached per post (up to 1000) and survive browser restarts. You can clear the cache from the popup.
+- **Popup** (toolbar icon): turn the extension on or off, choose the categories to **Rate posts for**, and switch **Auto-rate visible posts**. With auto-rate off, badges show `?` and posts are rated only when clicked.
+- Only the enabled categories are sent to the LLM. If you enable another category later, posts already rated are re-rated for the new category only, and their existing scores are kept.
+- Ratings are cached per post and category (up to 1000 posts) and survive browser restarts. You can clear the cache from the popup.
 - At most 3 requests run at once. Posts are rated only as they scroll near the viewport.
 
 **Cost and quota:** with auto-rate on, every post you scroll past is one API call. A fast scroll uses up Gemini's 15/min quickly; Groq absorbs the overflow. Switch to click-to-rate mode to save quota.
@@ -65,14 +91,17 @@ content script (x.com / threads.com)
 background service worker
   ├─ cache + in-flight de-dupe + concurrency limit
   └─ provider chain (budget check → call → fall back on 429/5xx/timeout)
-       with a JSON-schema-constrained response → { why, bait, troll, dumb, clown, verdict }
+       rating only the enabled categories, with a JSON-schema-constrained response
+       → { dumb: { why, score }, ... }, merged into the post's cache entry
 ```
 
 | Path | What it does |
 |---|---|
 | `src/content/adapters.js` | DOM selectors for X and Threads. Check here first when a site redesign breaks extraction. |
-| `src/content/index.js` | Badge, popover, scanning |
-| `src/background/prompt.js` | System prompt, scoring rubric and response schema |
+| `src/content/index.js` | Badges, popover, scanning |
+| `src/options/` | Options page: per-provider key, model, limits, test button |
+| `src/shared/categories.js` | Category list (id, label, emoji) |
+| `src/background/prompt.js` | Category definitions, prompt and response schema, built per request from the enabled categories |
 | `src/background/llm.js` | Provider fallback chain |
 | `src/background/providers.js` | Gemini, OpenAI-compatible (Groq, …) and Claude (official `@anthropic-ai/sdk`) API calls |
 | `src/background/ratelimit.js` | Per-provider minute/day budgets and cooldowns |
@@ -82,4 +111,6 @@ Only the text is judged. Images and video aren't sent, though the model is told 
 
 ## Security note
 
-The API keys are baked into `dist/background.js`. That's fine for an extension you load unpacked for yourself. **Don't publish `dist/` or ship it to the Chrome Web Store:** anyone with the package could read the keys. `.env` and `dist/` are git-ignored.
+`npm run build` bakes any API keys from `.env` into `dist/background.js`. That's fine for an extension you load unpacked for yourself. **Don't share that build or ship it to the Chrome Web Store:** anyone with the package could read the keys. To share it, use `npm run build:shareable`. `.env` and `dist/` are git-ignored.
+
+Keys entered in the options page live in the browser profile's extension storage and are only sent to their own provider's API.

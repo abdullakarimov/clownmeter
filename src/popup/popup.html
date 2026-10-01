@@ -11,6 +11,9 @@
       label { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; cursor: pointer; }
       label small { display: block; color: var(--muted); font-size: 11px; }
       input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+      fieldset { margin: 8px 0 0; padding: 8px 0 0; border: 0; border-top: 1px solid var(--line); }
+      legend { padding: 0; color: var(--muted); font-size: 12px; }
+      fieldset label { padding: 4px 0; }
       .meta { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
       .meta code { color: var(--fg); }
       ol { margin: 0 0 8px; padding-left: 18px; }
@@ -31,9 +34,13 @@
       <span>Auto-rate visible posts<small>Off: click a 🤡 badge to rate it</small></span>
       <input type="checkbox" id="autoScan" />
     </label>
+    <fieldset id="categories">
+      <legend>Rate posts for</legend>
+    </fieldset>
     <div class="meta">
       <ol id="providers"></ol>
       <div>Cached ratings: <span id="cached">…</span></div>
+      <button id="options" type="button">API keys &amp; models…</button>
       <button id="clear" type="button">Clear cached ratings</button>
     </div>
     <script src="popup.js"></script>

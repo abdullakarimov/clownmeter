@@ -1,7 +1,7 @@
 // One function per API flavour. Each returns a normalized assessment or throws ProviderError,
 // whose `temporary` flag tells the fallback chain whether the failure is worth cooling down on.
 import Anthropic from "@anthropic-ai/sdk";
-import { ASSESSMENT_SCHEMA, SYSTEM_PROMPT, buildUserMessage, normalizeAssessment } from "./prompt.js";
+import { buildSchema, buildSystemPrompt, buildUserMessage, normalizeAssessment } from "./prompt.js";
 import { msUntilQuotaReset } from "./ratelimit.js";
 
 const TIMEOUT_MS = 30_000;
@@ -20,14 +20,14 @@ export const CALLERS = { gemini: callGemini, openai: callOpenAICompatible, anthr
 
 // ---- Google Gemini (native generateContent API) ----
 
-async function callGemini(provider, post) {
-  const generationConfig = { responseMimeType: "application/json", responseJsonSchema: ASSESSMENT_SCHEMA };
+async function callGemini(provider, post, categories) {
+  const generationConfig = { responseMimeType: "application/json", responseJsonSchema: buildSchema(categories) };
   if (provider.effort) generationConfig.thinkingConfig = { thinkingLevel: provider.effort };
 
   const res = await send(provider, `${provider.baseUrl}/models/${encodeURIComponent(provider.model)}:generateContent`, {
     headers: { "x-goog-api-key": provider.apiKey },
     body: {
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: { parts: [{ text: buildSystemPrompt(categories) }] },
       contents: [{ role: "user", parts: [{ text: buildUserMessage(post) }] }],
       generationConfig,
     },
@@ -50,7 +50,7 @@ async function callGemini(provider, post) {
     .filter((part) => part.text && !part.thought)
     .map((part) => part.text)
     .join("");
-  return parseAssessment(provider, text);
+  return parseAssessment(provider, text, categories);
 }
 
 function geminiRetryDelay(body) {
@@ -63,19 +63,22 @@ function geminiRetryDelay(body) {
 
 // ---- OpenAI-compatible chat completions (Groq, OpenAI, OpenRouter, Ollama, ...) ----
 
-async function callOpenAICompatible(provider, post) {
+async function callOpenAICompatible(provider, post, categories) {
   const url = `${provider.baseUrl}/chat/completions`;
   const request = {
     model: provider.model,
     messages: [
-      { role: "system", content: `${SYSTEM_PROMPT}\n\nRespond with a single JSON object with keys: why, bait, troll, dumb, clown, verdict.` },
+      {
+        role: "system",
+        content: `${buildSystemPrompt(categories)}\n\nRespond with a single JSON object with keys ${categories.join(", ")}, each an object with "why" and "score".`,
+      },
       { role: "user", content: buildUserMessage(post) },
     ],
   };
   if (provider.effort) request.reasoning_effort = provider.effort;
   const headers = provider.apiKey ? { Authorization: `Bearer ${provider.apiKey}` } : {};
 
-  const strict = { type: "json_schema", json_schema: { name: "clownmeter_assessment", strict: true, schema: ASSESSMENT_SCHEMA } };
+  const strict = { type: "json_schema", json_schema: { name: "clownmeter_assessment", strict: true, schema: buildSchema(categories) } };
   let res = await send(provider, url, { headers, body: { ...request, response_format: strict } });
   // Not every OpenAI-compatible server or model supports json_schema; fall back to plain JSON mode.
   if (res.status === 400) res = await send(provider, url, { headers, body: { ...request, response_format: { type: "json_object" } } });
@@ -87,7 +90,7 @@ async function callOpenAICompatible(provider, post) {
   const choice = (await res.json()).choices?.[0];
   if (choice?.message?.refusal) throw new ProviderError(`${provider.label} declined to rate this post`);
   if (choice?.finish_reason === "length") throw new ProviderError(`${provider.label} response was cut off`);
-  return parseAssessment(provider, choice?.message?.content ?? "");
+  return parseAssessment(provider, choice?.message?.content ?? "", categories);
 }
 
 // ---- Anthropic Claude (official SDK) ----
@@ -97,10 +100,11 @@ const EFFORT_MODELS = /^claude-(opus-(4-[5-9]|5)|sonnet-(4-6|5)|fable|mythos)/;
 const FALLBACK_MODELS = /^claude-(opus-5|fable-5-1|sonnet-5-5)/;
 const anthropicClients = new Map();
 
-async function callClaude(provider, post) {
-  if (!anthropicClients.has(provider.id)) {
+async function callClaude(provider, post, categories) {
+  const clientKey = `${provider.apiKey}|${provider.baseUrl}`; // the key can change in the options page
+  if (!anthropicClients.has(clientKey)) {
     anthropicClients.set(
-      provider.id,
+      clientKey,
       new Anthropic({
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl,
@@ -111,14 +115,14 @@ async function callClaude(provider, post) {
       }),
     );
   }
-  const client = anthropicClients.get(provider.id);
+  const client = anthropicClients.get(clientKey);
 
   const params = {
     model: provider.model,
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(categories),
     messages: [{ role: "user", content: buildUserMessage(post) }],
-    output_config: { format: { type: "json_schema", schema: ASSESSMENT_SCHEMA } },
+    output_config: { format: { type: "json_schema", schema: buildSchema(categories) } },
   };
   if (provider.effort && EFFORT_MODELS.test(provider.model)) params.output_config.effort = provider.effort;
   // On a safety-classifier decline, let the API re-run the request on its recommended fallback model.
@@ -158,7 +162,7 @@ async function callClaude(provider, post) {
     .filter((block) => block.type === "text")
     .map((block) => block.text)
     .join("");
-  return parseAssessment(provider, text);
+  return parseAssessment(provider, text, categories);
 }
 
 // ---- Shared helpers ----
@@ -185,7 +189,8 @@ function httpError(provider, res, detail = "", retryAfterMs) {
   if (res.status >= 500) {
     return new ProviderError(`${label} unavailable (${res.status})`, { cooldownMs: TEMPORARY_COOLDOWN_MS, temporary: true });
   }
-  if (res.status === 401 || res.status === 403) {
+  // Gemini reports an invalid key as 400 INVALID_ARGUMENT rather than 401.
+  if (res.status === 401 || res.status === 403 || (res.status === 400 && /api key/i.test(detail))) {
     return new ProviderError(`${label} rejected the API key`, { cooldownMs: CONFIG_COOLDOWN_MS });
   }
   if (res.status === 404) return new ProviderError(`${label} model not found: ${provider.model}`, { cooldownMs: CONFIG_COOLDOWN_MS });
@@ -197,11 +202,14 @@ function retryAfter(res) {
   return seconds > 0 ? seconds * 1000 : undefined;
 }
 
-function parseAssessment(provider, text) {
+function parseAssessment(provider, text, categories) {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  let assessment = null;
   try {
-    return normalizeAssessment(JSON.parse(cleaned));
+    assessment = normalizeAssessment(JSON.parse(cleaned), categories);
   } catch {
-    throw new ProviderError(`${provider.label} returned malformed JSON`);
+    // reported below
   }
+  if (!assessment) throw new ProviderError(`${provider.label} returned malformed JSON`);
+  return assessment;
 }

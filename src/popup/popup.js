@@ -1,3 +1,4 @@
+import { CATEGORIES } from "../shared/categories.js";
 import { getSettings, setSettings } from "../shared/settings.js";
 
 const $ = (id) => document.getElementById(id);
@@ -19,7 +20,12 @@ function renderProvider(p) {
   const parts = [`${p.today}${p.rpd ? `/${p.rpd}` : ""} today`];
   if (p.rpm) parts.push(`${p.minute}/${p.rpm} this minute`);
   usage.textContent = parts.join(" · ");
-  if (p.nextAvailable) {
+  if (!p.usable) {
+    const missing = document.createElement("span");
+    missing.className = "limited";
+    missing.textContent = " · no API key, skipped";
+    usage.append(missing);
+  } else if (p.nextAvailable) {
     const until = new Date(p.nextAvailable).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     const limited = document.createElement("span");
     limited.className = "limited";
@@ -36,6 +42,21 @@ async function init() {
     $(key).checked = settings[key];
     $(key).addEventListener("change", (e) => setSettings({ [key]: e.target.checked }));
   }
+  for (const category of CATEGORIES) {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = !!settings.categories[category.id];
+    input.addEventListener("change", async () => {
+      const { categories } = await getSettings();
+      setSettings({ categories: { ...categories, [category.id]: input.checked } });
+    });
+    const name = document.createElement("span");
+    name.textContent = `${category.emoji} ${category.label}`;
+    label.append(name, input);
+    $("categories").append(label);
+  }
+  $("options").addEventListener("click", () => chrome.runtime.openOptionsPage());
   $("clear").addEventListener("click", async () => {
     await chrome.runtime.sendMessage({ type: "clownmeter:clearCache" });
     refreshInfo();

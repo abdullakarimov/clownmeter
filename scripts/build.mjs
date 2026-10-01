@@ -9,6 +9,9 @@ import * as esbuild from "esbuild";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist");
 const watch = process.argv.includes("--watch");
+// --no-keys leaves API keys out of the bundle, for a build you can share; users add keys in the options page.
+const noKeys = process.argv.includes("--no-keys");
+const DEFAULT_ORDER = ["gemini", "groq"];
 
 // Each provider reads <ID>_API_KEY, <ID>_MODEL, <ID>_BASE_URL, <ID>_EFFORT, <ID>_RPM, <ID>_RPD from .env.
 const PROVIDERS = {
@@ -20,26 +23,26 @@ const PROVIDERS = {
 
 async function loadConfig() {
   const envPath = path.join(root, ".env");
-  if (!existsSync(envPath)) {
-    throw new Error("Missing .env — copy .env.example to .env and add at least one provider API key.");
-  }
-  const env = parseEnv(await readFile(envPath, "utf8"));
+  const env = existsSync(envPath) ? parseEnv(await readFile(envPath, "utf8")) : {};
   const get = (name) => (env[name] ?? "").trim();
 
+  const withKeys = Object.keys(PROVIDERS).filter((id) => get(`${id.toUpperCase()}_API_KEY`));
   const order = get("LLM_PROVIDERS")
     ? get("LLM_PROVIDERS").toLowerCase().split(/[\s,]+/).filter(Boolean)
-    : Object.keys(PROVIDERS).filter((id) => get(`${id.toUpperCase()}_API_KEY`));
-  if (!order.length) throw new Error("No providers configured — set LLM_PROVIDERS and the matching *_API_KEY in .env.");
+    : withKeys.length
+      ? withKeys
+      : DEFAULT_ORDER;
 
+  // Keys and models may be left out here; they can be set in the extension's options page instead.
   const providers = order.map((id) => {
     const defaults = PROVIDERS[id];
     if (!defaults) throw new Error(`Unknown provider "${id}" in LLM_PROVIDERS (expected: ${Object.keys(PROVIDERS).join(", ")}).`);
     const P = id.toUpperCase();
-    const provider = {
+    return {
       id,
       kind: defaults.kind,
       label: defaults.label,
-      apiKey: get(`${P}_API_KEY`),
+      apiKey: noKeys ? "" : get(`${P}_API_KEY`),
       model: get(`${P}_MODEL`) || defaults.model,
       baseUrl: (get(`${P}_BASE_URL`) || defaults.baseUrl).replace(/\/+$/, ""),
       customBaseUrl: !!get(`${P}_BASE_URL`),
@@ -47,10 +50,6 @@ async function loadConfig() {
       rpm: Number(get(`${P}_RPM`)) || 0,
       rpd: Number(get(`${P}_RPD`)) || 0,
     };
-    if (!provider.model) throw new Error(`${P}_MODEL is required in .env.`);
-    // Local OpenAI-compatible servers (Ollama, LM Studio) may not need a key; hosted APIs do.
-    if (!provider.apiKey && !provider.customBaseUrl) throw new Error(`${P}_API_KEY is required in .env.`);
-    return provider;
   });
   return { providers };
 }
@@ -77,15 +76,21 @@ async function build() {
     },
     { ...shared, entryPoints: { content: "src/content/index.js" }, format: "iife" },
     { ...shared, entryPoints: { popup: "src/popup/popup.js" }, format: "iife" },
+    { ...shared, entryPoints: { options: "src/options/options.js" }, format: "iife" },
   ].map((opts) => ({ ...opts, absWorkingDir: root, outdir: dist }));
 
   await writeManifest(config);
   await cp(path.join(root, "src/content/content.css"), path.join(dist, "content.css"));
   await cp(path.join(root, "src/popup/popup.html"), path.join(dist, "popup.html"));
+  await cp(path.join(root, "src/options/options.html"), path.join(dist, "options.html"));
   await cp(path.join(root, "icons"), path.join(dist, "icons"), { recursive: true });
 
   const chain = config.providers
-    .map((p) => `${p.label} (${p.model}${p.rpm || p.rpd ? `, ${p.rpm || "∞"}/min ${p.rpd || "∞"}/day` : ""})`)
+    .map((p) => {
+      const limits = p.rpm || p.rpd ? `, ${p.rpm || "∞"}/min ${p.rpd || "∞"}/day` : "";
+      const key = p.apiKey ? "key from .env" : "no key — set in options";
+      return `${p.label} (${p.model || "no model"}${limits}, ${key})`;
+    })
     .join(" → ");
   if (watch) {
     for (const opts of builds) await (await esbuild.context(opts)).watch();

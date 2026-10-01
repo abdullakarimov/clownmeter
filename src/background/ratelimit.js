@@ -66,6 +66,12 @@ export class Budget {
     return 0;
   }
 
+  /** Forgets usage and cooldowns, e.g. after the API key changes. */
+  reset() {
+    this.state = { day: quotaDay(Date.now()), dayCount: 0, recent: [], cooldownUntil: 0 };
+    this.#save();
+  }
+
   coolDown(ms) {
     this.state.cooldownUntil = Math.max(this.state.cooldownUntil, Date.now() + ms);
     this.#save();

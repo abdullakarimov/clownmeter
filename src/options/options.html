@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clownmeter Options</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fg: #1f2328; --muted: #656d76; --bg: #f6f8fa; --card: #fff; --line: #d0d7de;
+        --accent: #d92d20; --ok: #1a7f37; --err: #cf222e; --field: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --fg: #e6edf3; --muted: #8d96a0; --bg: #0d1117; --card: #161b22; --line: #30363d; --ok: #3fb950; --err: #f85149; --field: #0d1117; }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 32px 16px 64px; background: var(--bg); color: var(--fg); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      main { max-width: 600px; margin: 0 auto; }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      .intro { margin: 0 0 24px; color: var(--muted); }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+      .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+      h2 { margin: 0; font-size: 16px; }
+      h2 .order { color: var(--muted); font-weight: 500; margin-right: 4px; }
+      .status { font-size: 12px; color: var(--muted); white-space: nowrap; }
+      .status[data-kind="none"] { color: var(--err); }
+      .role { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+      label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 13px; }
+      label a { font-weight: 400; margin-left: 6px; color: var(--muted); }
+      .row { display: flex; gap: 8px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+      input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); color: var(--fg); font: inherit; }
+      input:focus { outline: 2px solid #0969da; outline-offset: -1px; border-color: transparent; }
+      .hint { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+      button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--fg); font: inherit; cursor: pointer; white-space: nowrap; }
+      button:hover { border-color: var(--muted); }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+      button:disabled { opacity: 0.6; cursor: progress; }
+      .test { display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; }
+      .result { margin: 0; padding-top: 8px; font-size: 13px; color: var(--muted); }
+      .result[data-ok="true"] { color: var(--ok); }
+      .result[data-ok="false"] { color: var(--err); }
+      .actions { display: flex; align-items: center; gap: 12px; position: sticky; bottom: 0; padding: 12px 0; background: var(--bg); }
+      .saved { color: var(--ok); font-size: 13px; }
+      .note { margin-top: 24px; color: var(--muted); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>🤡 Clownmeter</h1>
+      <p class="intro">API keys, models and rate limits. Leave a field empty to use the built-in default.</p>
+      <form id="form">
+        <div id="providers"></div>
+        <div class="actions">
+          <button type="submit" class="primary">Save</button>
+          <span class="saved" id="saved" hidden>Saved ✓</span>
+        </div>
+      </form>
+      <p class="note">
+        Keys are stored only in this browser profile (<code>chrome.storage.local</code>) and sent only to the provider they belong to.
+      </p>
+    </main>
+    <template id="provider-template">
+      <section class="card">
+        <div class="card-head">
+          <h2><span class="order"></span><span class="name"></span></h2>
+          <span class="status"></span>
+        </div>
+        <p class="role"></p>
+        <label>API key <a class="key-link" target="_blank" rel="noopener" hidden>Get a key ↗</a></label>
+        <div class="row">
+          <input name="apiKey" type="password" autocomplete="off" spellcheck="false" />
+          <button type="button" class="reveal">Show</button>
+        </div>
+        <label>Model</label>
+        <input name="model" type="text" autocomplete="off" spellcheck="false" />
+        <div class="grid">
+          <div>
+            <label>Requests per minute</label>
+            <input name="rpm" type="number" min="0" step="1" />
+          </div>
+          <div>
+            <label>Requests per day</label>
+            <input name="rpd" type="number" min="0" step="1" />
+          </div>
+        </div>
+        <p class="hint">Match your plan's limits so the extension switches to the next provider before this one starts refusing. 0 = no limit.</p>
+        <div class="test">
+          <button type="button" class="test-button">Test</button>
+          <p class="result"></p>
+        </div>
+      </section>
+    </template>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -10,11 +10,44 @@ export class AssessmentError extends Error {
   }
 }
 
+/** Built-in provider configs (from .env), each with a persistent request budget. */
 export function createProviders(configs) {
-  return configs.map((config) => ({ ...config, budget: new Budget(config.id, config) }));
+  return configs.map((base) => ({ base, budget: new Budget(base.id, base) }));
 }
 
-export async function assess(providers, post) {
+/** Applies options-page overrides on top of the built-in configs. */
+export function resolveProviders(providers, overrides) {
+  return providers.map(({ base, budget }) => {
+    const o = overrides[base.id] ?? {};
+    const provider = {
+      ...base,
+      apiKey: o.apiKey || base.apiKey,
+      model: o.model || base.model,
+      rpm: o.rpm ?? base.rpm,
+      rpd: o.rpd ?? base.rpd,
+      keySource: o.apiKey ? "options" : base.apiKey ? ".env" : "",
+      budget,
+    };
+    budget.rpm = provider.rpm;
+    budget.rpd = provider.rpd;
+    return provider;
+  });
+}
+
+// Local OpenAI-compatible servers (custom base URL) may not need a key; hosted APIs do.
+export const isUsable = (provider) => !!provider.model && (!!provider.apiKey || provider.customBaseUrl);
+
+/** Calls one provider directly, outside the budget and fallback chain. */
+export function callProvider(provider, post, categories) {
+  return CALLERS[provider.kind](provider, post, categories);
+}
+
+/** Rates the post on the given categories; returns { [category]: { score, why, ratedBy } }. */
+export async function assess(allProviders, post, categories) {
+  const providers = allProviders.filter(isUsable);
+  if (!providers.length) {
+    throw new AssessmentError("No API key set. Add one in the Clownmeter options (right-click the toolbar icon → Options).");
+  }
   await Promise.all(providers.map((p) => p.budget.load()));
   const failures = [];
 
@@ -24,8 +57,10 @@ export async function assess(providers, post) {
       continue;
     }
     try {
-      const assessment = await CALLERS[provider.kind](provider, post);
-      return { ...assessment, ratedBy: `${provider.label} · ${provider.model}` };
+      const assessment = await callProvider(provider, post, categories);
+      const ratedBy = `${provider.label} · ${provider.model}`;
+      for (const axis of Object.values(assessment)) axis.ratedBy = ratedBy;
+      return assessment;
     } catch (err) {
       if (!(err instanceof ProviderError)) throw err;
       if (err.cooldownMs) provider.budget.coolDown(err.cooldownMs);

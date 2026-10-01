@@ -1,7 +1,11 @@
+import { CATEGORY_IDS } from "./categories.js";
+
 export const DEFAULT_SETTINGS = {
   enabled: true,
-  // true: rate posts as they scroll into view; false: rate only when the 🤡 badge is clicked.
+  // true: rate posts as they scroll into view; false: rate only when a badge is clicked.
   autoScan: true,
+  // Which axes to rate posts on; each enabled one gets its own badge.
+  categories: { bait: false, troll: false, dumb: true },
 };
 
 export async function getSettings() {
@@ -10,4 +14,8 @@ export async function getSettings() {
 
 export function setSettings(patch) {
   return chrome.storage.sync.set(patch);
+}
+
+export function enabledCategories(settings) {
+  return CATEGORY_IDS.filter((id) => settings.categories?.[id]);
 }
