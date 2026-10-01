@@ -20,6 +20,7 @@
 .cm-badge:hover { filter: brightness(0.95); }
 .cm-badge:focus-visible { outline: 2px solid #1d9bf0; outline-offset: 1px; }
 .cm-badge[data-state="loading"] { opacity: 0.7; cursor: progress; }
+.cm-badge[data-state="waiting"] { opacity: 0.8; }
 .cm-badge[data-state="error"] { color: #8a1c1c; background: #fde2e2; }
 .cm-badge[data-level="low"] { color: #0f5132; background: #d1f2df; }
 .cm-badge[data-level="mid"] { color: #6b4e00; background: #fff0b8; }
@@ -51,3 +52,4 @@
 .cm-pop-fill[data-level="high"] { background: #ff8a3d; }
 .cm-pop-fill[data-level="max"] { background: #ff4d3d; }
 .cm-pop-why { margin: 10px 0 0; color: #c4c8cc; }
+.cm-pop-meta { margin: 8px 0 0; color: #7d848b; font-size: 11px; }

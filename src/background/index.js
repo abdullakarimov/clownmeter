@@ -1,10 +1,11 @@
-import { AssessmentError, assess } from "./llm.js";
+import { AssessmentError, assess, createProviders } from "./llm.js";
 
 // Injected from .env by scripts/build.mjs.
 const CONFIG = __CLOWNMETER_CONFIG__;
+const providers = createProviders(CONFIG.providers);
 
 const MAX_CONCURRENT = 3;
-const CACHE_KEY = "assessmentCache";
+const CACHE_KEY = "assessmentCache.v2";
 const CACHE_LIMIT = 1000;
 
 // ---- Cache (persisted so a service-worker restart doesn't re-bill the same posts) ----
@@ -14,6 +15,7 @@ let persistTimer;
 
 async function loadCache() {
   if (!cache) {
+    chrome.storage.local.remove("assessmentCache"); // v1 cache, keyed by model
     const stored = (await chrome.storage.local.get(CACHE_KEY))[CACHE_KEY] ?? [];
     cache = new Map(stored);
   }
@@ -29,7 +31,7 @@ function persistCache() {
 }
 
 function cacheKey(post) {
-  return `${CONFIG.model}|${post.platform}|${post.id || hash(`${post.text}\u0000${post.quote?.text ?? ""}`)}`;
+  return `${post.platform}|${post.id || hash(`${post.text}\u0000${post.quote?.text ?? ""}`)}`;
 }
 
 function hash(str) {
@@ -74,7 +76,7 @@ async function analyze(post) {
     return hit;
   }
   if (!inFlight.has(key)) {
-    const promise = schedule(() => assess(CONFIG, post))
+    const promise = schedule(() => assess(providers, post))
       .then((assessment) => {
         store.set(key, assessment);
         persistCache();
@@ -93,15 +95,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     analyze(message.post).then(
       (assessment) => sendResponse({ ok: true, assessment }),
       (err) => {
-        if (!(err instanceof AssessmentError)) console.error("Clownmeter:", err);
-        sendResponse({ ok: false, error: err instanceof AssessmentError ? err.message : "Unexpected error — see the service worker console." });
+        if (err instanceof AssessmentError) {
+          sendResponse({ ok: false, error: err.message, retryAt: err.retryAt });
+        } else {
+          console.error("Clownmeter:", err);
+          sendResponse({ ok: false, error: "Unexpected error — see the service worker console." });
+        }
       },
     );
     return true; // async response
   }
   if (message?.type === "clownmeter:info") {
-    loadCache().then((store) =>
-      sendResponse({ provider: CONFIG.provider, model: CONFIG.model, cached: store.size }),
+    Promise.all([loadCache(), ...providers.map((p) => p.budget.load())]).then(([store]) =>
+      sendResponse({
+        cached: store.size,
+        providers: providers.map((p) => ({ label: p.label, model: p.model, ...p.budget.snapshot() })),
+      }),
     );
     return true;
   }

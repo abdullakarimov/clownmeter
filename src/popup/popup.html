@@ -13,6 +13,10 @@
       input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
       .meta { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
       .meta code { color: var(--fg); }
+      ol { margin: 0 0 8px; padding-left: 18px; }
+      li { margin-bottom: 6px; }
+      li .usage { display: block; font-size: 11px; }
+      li .limited { color: var(--accent); }
       button { margin-top: 10px; width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); font: inherit; cursor: pointer; }
       button:hover { border-color: var(--muted); }
     </style>
@@ -28,7 +32,7 @@
       <input type="checkbox" id="autoScan" />
     </label>
     <div class="meta">
-      <div>Model: <code id="model">…</code></div>
+      <ol id="providers"></ol>
       <div>Cached ratings: <span id="cached">…</span></div>
       <button id="clear" type="button">Clear cached ratings</button>
     </div>

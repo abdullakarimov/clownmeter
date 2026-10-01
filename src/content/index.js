@@ -26,6 +26,9 @@ function renderBadge(entry) {
   } else if (state === "loading") {
     badge.textContent = "🤡 …";
     badge.title = "Clownmeter: rating…";
+  } else if (state === "waiting") {
+    badge.textContent = "🤡 ⏳";
+    badge.title = `Clownmeter: ${error}\nRetrying around ${formatTime(entry.retryAt)}. Click to try now.`;
   } else if (state === "error") {
     badge.textContent = "🤡 !";
     badge.title = `Clownmeter: ${error}\nClick to retry.`;
@@ -34,6 +37,10 @@ function renderBadge(entry) {
     badge.dataset.level = levelFor(assessment.clown);
     badge.title = `${assessment.verdict}\nBait ${assessment.bait} · Troll ${assessment.troll} · Dumb ${assessment.dumb}\nClick for details.`;
   }
+}
+
+function formatTime(timestamp) {
+  return new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 function createBadge(entry) {
@@ -91,6 +98,7 @@ function toggleDetails(entry) {
     pop.append(row);
   }
   pop.append(el("p", "cm-pop-why", assessment.why));
+  if (assessment.ratedBy) pop.append(el("p", "cm-pop-meta", `Rated by ${assessment.ratedBy}`));
   pop.addEventListener("click", (e) => e.stopPropagation());
 
   document.body.append(pop);
@@ -116,6 +124,7 @@ window.addEventListener("keydown", (e) => e.key === "Escape" && closeDetails());
 // ---- Analysis ----
 
 async function analyze(entry) {
+  clearTimeout(entry.retryTimer);
   entry.state = "loading";
   renderBadge(entry);
   let response;
@@ -127,6 +136,11 @@ async function analyze(entry) {
   if (response?.ok) {
     entry.state = "done";
     entry.assessment = response.assessment;
+  } else if (response?.retryAt) {
+    entry.state = "waiting";
+    entry.error = response.error;
+    entry.retryAt = response.retryAt;
+    scheduleRetry(entry);
   } else {
     entry.state = "error";
     entry.error = response?.error ?? "No response from extension.";
@@ -134,12 +148,28 @@ async function analyze(entry) {
   renderBadge(entry);
 }
 
+// When every provider is rate-limited, retry once a slot frees up — but only for posts still on screen.
+// Off-screen ones go back to idle and get rated when scrolled to again.
+function scheduleRetry(entry) {
+  const jitter = Math.random() * 3000; // spread retries so they don't all hit the budget at once
+  entry.retryTimer = setTimeout(() => {
+    if (entry.state !== "waiting" || !entry.badge.isConnected) return;
+    if (entry.visible && settings.autoScan) {
+      analyze(entry);
+    } else {
+      entry.state = "idle";
+      renderBadge(entry);
+    }
+  }, Math.max(1000, entry.retryAt - Date.now()) + jitter);
+}
+
 const visibility = new IntersectionObserver(
   (records) => {
     for (const record of records) {
-      if (!record.isIntersecting) continue;
       const entry = tracked.get(record.target);
-      if (entry && entry.state === "idle" && settings.autoScan) analyze(entry);
+      if (!entry) continue;
+      entry.visible = record.isIntersecting;
+      if (entry.visible && entry.state === "idle" && settings.autoScan) analyze(entry);
     }
   },
   { rootMargin: "300px 0px" },
