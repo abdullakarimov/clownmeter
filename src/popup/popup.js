@@ -38,7 +38,7 @@ function renderProvider(p) {
 
 async function init() {
   const settings = await getSettings();
-  for (const key of ["enabled", "autoScan"]) {
+  for (const key of ["enabled", "autoScan", "skipMedia"]) {
     $(key).checked = settings[key];
     $(key).addEventListener("change", (e) => setSettings({ [key]: e.target.checked }));
   }

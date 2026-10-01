@@ -6,12 +6,29 @@ const adapter = adapterForHost(location.hostname);
 const GROUP_CLASS = "cm-badges";
 
 let settings = { enabled: false, autoScan: false, categories: {} };
-// post element -> { id, post, group, assessment, state, visible, retryTimer }
+// post element -> { id, post, postEl, group, assessment, state, visible, retryTimer, forced }
 // assessment holds every category rated so far; state describes the request for the missing ones
 // ("idle" | "loading" | "waiting" | "error").
 const tracked = new WeakMap();
 
 const missingCategories = (entry) => enabledCategories(settings).filter((id) => !entry.assessment[id]);
+
+// Posts with media the model can't see are skipped unless the user clicks to rate them anyway (forced).
+// Ratings already on hand are still shown.
+const isSkipped = (entry) =>
+  settings.skipMedia && entry.post.hasMedia && !entry.forced && enabledCategories(settings).every((id) => !entry.assessment[id]);
+
+// Images and video often load after the text, so re-read the post before deciding to spend a request on it.
+function refreshPost(entry) {
+  try {
+    const data = entry.postEl.isConnected ? adapter.extract(entry.postEl) : null;
+    if (data?.id !== entry.id) return;
+    const { anchor, ...post } = data;
+    entry.post = { ...post, platform: adapter.platform };
+  } catch {
+    // keep what we had
+  }
+}
 
 // ---- Badge rendering ----
 
@@ -30,6 +47,16 @@ const PENDING = {
 };
 
 function renderBadges(entry) {
+  if (isSkipped(entry)) {
+    const badge = document.createElement("button");
+    badge.type = "button";
+    badge.className = "cm-badge";
+    badge.dataset.state = "skipped";
+    badge.textContent = "🖼️";
+    badge.title = "Clownmeter: skipped — this post has images, video or a link preview the model can't see.\nClick to rate it anyway.";
+    entry.group.replaceChildren(badge);
+    return;
+  }
   const badges = CATEGORIES.filter((c) => settings.categories?.[c.id]).map((category) => {
     const badge = document.createElement("button");
     badge.type = "button";
@@ -68,6 +95,11 @@ function createGroup(entry) {
 }
 
 function onBadgeClick(entry, badge) {
+  if (badge.dataset.state === "skipped") {
+    entry.forced = true;
+    analyze(entry);
+    return;
+  }
   const category = badge.dataset.category;
   if (entry.assessment[category]) toggleDetails(entry, category, badge);
   else if (entry.state !== "loading") analyze(entry);
@@ -130,12 +162,16 @@ window.addEventListener("keydown", (e) => e.key === "Escape" && closeDetails());
 // ---- Analysis ----
 
 function maybeAutoAnalyze(entry) {
-  if (entry.visible && settings.autoScan && entry.state === "idle" && missingCategories(entry).length) analyze(entry);
+  if (!(entry.visible && settings.autoScan && entry.state === "idle" && missingCategories(entry).length)) return;
+  refreshPost(entry);
+  if (isSkipped(entry)) renderBadges(entry);
+  else analyze(entry);
 }
 
 async function analyze(entry) {
   const categories = enabledCategories(settings);
   if (!categories.length) return;
+  refreshPost(entry);
   clearTimeout(entry.retryTimer);
   entry.state = "loading";
   renderBadges(entry);
@@ -209,6 +245,7 @@ function scan() {
     const { anchor, ...post } = data;
     const reuse = existing?.id === post.id ? existing : null; // re-attaching after a disable/enable keeps ratings
     const entry = reuse ?? { id: post.id, post: { ...post, platform: adapter.platform }, assessment: {}, state: "idle" };
+    entry.postEl = postEl;
     entry.group = createGroup(entry);
     renderBadges(entry);
     anchor.after(entry.group);
@@ -254,7 +291,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     return;
   }
   scan();
-  if (changes.categories || changes.autoScan) {
+  if (changes.categories || changes.autoScan || changes.skipMedia) {
     closeDetails();
     forEachEntry((entry) => {
       if (entry.state === "error") entry.state = "idle"; // give newly enabled categories a fresh try

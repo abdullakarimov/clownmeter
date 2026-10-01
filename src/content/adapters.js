@@ -1,5 +1,7 @@
 // Per-site DOM scraping. Each adapter finds post elements and extracts
 // { id, author, text, quote, hasMedia } plus the element the badge is placed after.
+// hasMedia covers anything the model can't see: images, video, GIFs and link preview cards,
+// in the post itself or in a post it quotes.
 // These selectors track the live sites and are the first thing to check when a site redesigns.
 
 const textOf = (el) => (el?.innerText ?? "").trim();
@@ -30,9 +32,7 @@ const x = {
       author: xAuthor(names.find((el) => !inQuote(el))),
       text: textOf(mainText),
       quote: quoteText ? { text: textOf(quoteText), author: xAuthor(quoteCard?.querySelector('[data-testid="User-Name"]')) } : null,
-      hasMedia: [...article.querySelectorAll('[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="card.wrapper"]')].some(
-        (el) => !inQuote(el),
-      ),
+      hasMedia: !!article.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="card.wrapper"]'),
       anchor: timeLink,
     };
   },

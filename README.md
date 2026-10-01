@@ -30,17 +30,17 @@ After changing `.env`, run `npm run build` again and click the reload icon on th
 
 ### `.env` options
 
-`LLM_PROVIDERS` sets the order providers are tried in (default: every provider with an API key, in the order gemini, groq, anthropic, openai). Each provider `<ID>` reads:
+`LLM_PROVIDERS` sets the order providers are tried in. By default it's every provider with an API key in `.env`, in the order gemini, groq, anthropic, openai, or `gemini,groq` if no keys are set. Each provider `<ID>` reads:
 
 | Variable | Notes |
 |---|---|
-| `<ID>_API_KEY` | Required. May be empty only for a local server set via `<ID>_BASE_URL` |
-| `<ID>_MODEL` | Defaults: `gemini-3.5-flash-lite`, `openai/gpt-oss-120b` (Groq), `claude-opus-5-5`; required for `openai` |
+| `<ID>_API_KEY` | Optional, if the key is set in the options page instead. Not needed for a local server set via `<ID>_BASE_URL` |
+| `<ID>_MODEL` | Defaults: `gemini-3.5-flash-lite`, `openai/gpt-oss-120b` (Groq), `claude-opus-5-5`. `openai` has no default; set it here or in the options page |
 | `<ID>_EFFORT` | Optional reasoning effort such as `low`. Sent as Gemini `thinkingLevel`, OpenAI-style `reasoning_effort`, or Claude `effort` |
 | `<ID>_RPM` / `<ID>_RPD` | Optional client-side request caps per minute and per day. Daily counts reset at midnight Pacific, matching Gemini's quota reset |
 | `<ID>_BASE_URL` | Optional API base URL override |
 
-The default setup in `.env.example` is Gemini (capped at 15/min and 500/day to match the free tier) with Groq as the fallback.
+The default setup in `.env.example` is Gemini with Groq as the fallback. Gemini is capped at 10/min and 500/day: the free tier allows 15/min, but staying under it avoids most of its rate-limit errors.
 
 The build adds every provider's API origin to the manifest's `host_permissions` automatically.
 
@@ -74,12 +74,18 @@ This builds `dist/` **without** any API keys from `.env`, but keeps the provider
 
 ## Using it
 
-- **Popup** (toolbar icon): turn the extension on or off, choose the categories to **Rate posts for**, and switch **Auto-rate visible posts**. With auto-rate off, badges show `?` and posts are rated only when clicked.
+- **Popup** (toolbar icon) settings:
+  - turn the extension on or off;
+  - choose the categories to **Rate posts for**;
+  - **Auto-rate visible posts**: when off, badges show `?` and posts are rated only when clicked;
+  - **Skip posts with media**, explained below;
+  - see each provider's usage, open the options page, or clear cached ratings.
+- **Skip posts with media** (on by default): posts with images, video, GIFs or link previews, including inside a quoted post, aren't sent to the LLM, which only sees text. They get a faded 🖼️ badge instead; click it to rate that post anyway. Media often loads after the text, so each post is re-checked right before it would be rated.
 - Only the enabled categories are sent to the LLM. If you enable another category later, posts already rated are re-rated for the new category only, and their existing scores are kept.
 - Ratings are cached per post and category (up to 1000 posts) and survive browser restarts. You can clear the cache from the popup.
 - At most 3 requests run at once. Posts are rated only as they scroll near the viewport.
 
-**Cost and quota:** with auto-rate on, every post you scroll past is one API call. A fast scroll uses up Gemini's 15/min quickly; Groq absorbs the overflow. Switch to click-to-rate mode to save quota.
+**Cost and quota:** with auto-rate on, every text-only post you scroll past is one API call. A fast scroll uses up Gemini's per-minute limit quickly, and Groq takes the overflow. Click-to-rate mode saves quota.
 
 ## How it works
 
@@ -87,6 +93,7 @@ This builds `dist/` **without** any API keys from `.env`, but keeps the provider
 content script (x.com / threads.com)
   ├─ MutationObserver finds posts → site adapter extracts author, text, quoted post, media flag
   ├─ IntersectionObserver triggers rating when a post nears the viewport
+  │    (posts with media are skipped with a 🖼️ badge unless clicked)
   └─ sends post to ↓
 background service worker
   ├─ cache + in-flight de-dupe + concurrency limit
@@ -107,7 +114,7 @@ background service worker
 | `src/background/ratelimit.js` | Per-provider minute/day budgets and cooldowns |
 | `scripts/build.mjs` | Reads `.env`, bundles with esbuild into `dist/` |
 
-Only the text is judged. Images and video aren't sent, though the model is told when a post has media.
+Only the text is judged. Images and video aren't sent. Posts with media are skipped by default, and when one is rated anyway, the model is told it has media it can't see.
 
 ## Security note
 
